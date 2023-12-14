@@ -3,9 +3,7 @@
 namespace App\Console\Commands;
 
 use Exception;
-use Illuminate\Support\Arr;
 use Illuminate\Console\Command;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 class day1 extends Command
@@ -35,12 +33,11 @@ class day1 extends Command
      */
     public function handle()
     {
-        // get CSV - should stream it instead of putting into memory but YOLO
         $file = Storage::disk('files')->get('codes.csv');
 
         $total = collect(explode("\r".PHP_EOL, $file))
-            ->map($this->extract(...))
-            ->sum();
+        ->map($this->extract(...))
+        ->sum();
 
         $this->info('sum: '.$total);
     }
