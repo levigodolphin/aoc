@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 class day2 extends Command
@@ -17,45 +18,36 @@ class day2 extends Command
      */
     protected $description = 'Some game stuff?';
 
-    /**
-     * @var array<string, int>
-     */
-    private array $target = [
-        'red' => 12,
-        'green' => 13,
-        'blue' => 14,
-    ];
-
     public function handle()
     {
         $file = Storage::disk('files')->get('games.csv');
 
         $sum = collect(explode("\r".PHP_EOL, $file))
-            ->map($this->getEligableIds(...))
-            ->filter(fn (?int $value) => is_numeric($value))
+            ->map($this->tallyGames(...))
             ->sum();
 
         $this->info($sum);
     }
 
-    private function getEligableIds(string $line): ?int
+    private function tallyGames(string $line): int
     {
-        $parts = explode(':', $line);
+        $game = explode(':', $line);
 
-        foreach(explode(';', $parts[1]) as $check) {            
-            foreach(explode(',', $check) as $pull) {
-                foreach(array_keys($this->target) as $color) {
-                    if(str_contains($pull, $color)) {
-                        if((int) trim(str_replace($color, '', $pull)) > $this->target[$color]) {
-                            return null;
-                        }
+        $colorsMax = ['red' => 0, 'green' => 0, 'blue' => 0];
 
-                        break;
-                    }
-                }
-            }
-        }
+        collect(explode(';', $game[1]))
+            ->flatMap(fn ($check) => explode(',', $check))
+            ->each(function ($pull) use (&$colorsMax) {
+                collect(array_keys($colorsMax))
+                    ->filter(fn ($color) => str_contains($pull, $color))
+                    ->each(function ($color) use (&$colorsMax, $pull) {
+                        $colorsMax[$color] = max([
+                            (int) trim(str_replace($color, '', $pull)), 
+                            $colorsMax[$color],
+                        ]);
+                    });
+            });
 
-        return str_replace('Game ', '', $parts[0]);
+        return array_product(array_values($colorsMax));
     }
 }
