@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
 class day4 extends Command
@@ -24,21 +25,43 @@ class day4 extends Command
     {
         $file = Storage::disk('files')->get('tickets.csv');
 
-        $sum = collect(explode("\r".PHP_EOL, $file))
-            ->map($this->getWinningNumbers(...))
-            ->reject(fn (array $win) => empty($win))
-            ->map($this->scoreWins(...))
-            ->sum();
+        $wins = collect(explode("\r".PHP_EOL, $file))
+            ->mapWithKeys($this->getWinningNumbers(...))
+            ->reverse();
 
-        $this->info('Sum: '.$sum);
+        $prizeCards = $this->getPrizeCards($wins);
+
+        $this->info('Sum: '.$prizeCards);
     }
 
-    private function scoreWins(array $wins): int
+    private function getPrizeCards(Collection $wins): int
     {
-        return collect(array_values($wins))
-            ->reduce(function (int $carry, string $number, int $index) {
-                return $index === 0 ? $carry : $carry * 2;
-            }, 1);
+        return array_sum(
+                $wins->reduce(function (array $carry, int $winCount, int $game) use ($wins) {
+                $carry[$game] = $carry[$game] ?? 1;
+
+                $this->tallyChildCardPrizes($game, $game, $carry, $wins);
+
+                return $carry;
+            }, [])
+        );
+    }
+
+    private function tallyChildCardPrizes(int $game, int $original, array &$gameCardPrizes, Collection $wins): void
+    {
+        if (! $wins->get($game)) {
+            return;
+        }
+
+        foreach (range($game + 1, $game + $wins->get($game)) as $prizeGame) {
+            if (isset($gameCardPrizes[$prizeGame])) {
+                $gameCardPrizes[$original] += $gameCardPrizes[$prizeGame];
+
+                continue;
+            }
+
+            $this->tallyChildCardPrizes($prizeGame, $original, $gameCardPrizes, $wins);
+        }
     }
 
     private function getWinningNumbers(string $card): array
@@ -47,13 +70,18 @@ class day4 extends Command
 
         [$winning, $chosen] = explode('|', $game[1]);
 
-        return array_filter(
-            array_unique(
-                array_intersect(
-                    explode(' ', trim($winning)), 
-                    explode(' ', trim($chosen))
+        return [
+            str_replace(['Card', ' '], ['', ''], trim($game[0])) =>
+            count(
+                array_filter(
+                    array_unique(
+                        array_intersect(
+                            explode(' ', trim($winning)), 
+                            explode(' ', trim($chosen))
+                        )
+                    )
                 )
             )
-        );
+        ];
     }
 }
