@@ -27,23 +27,24 @@ class day4 extends Command
 
         $wins = collect(explode("\r".PHP_EOL, $file))
             ->mapWithKeys($this->getWinningNumbers(...))
-            ->reverse();
+            ->reverse()
+            ->pipe(fn (Collection $wins) => $this->getPrizeCards($wins));
 
-        $prizeCards = $this->getPrizeCards($wins);
-
-        $this->info('Sum: '.$prizeCards);
+        $this->info('Sum: '.$wins);
     }
 
     private function getPrizeCards(Collection $wins): int
     {
         return array_sum(
-                $wins->reduce(function (array $carry, int $winCount, int $game) use ($wins) {
-                $carry[$game] = $carry[$game] ?? 1;
+            $wins->reduce(
+                function (array $carry, int $winCount, int $game) use ($wins) {
+                    $carry[$game] = $carry[$game] ?? 1;
 
-                $this->tallyChildCardPrizes($game, $game, $carry, $wins);
+                    $this->tallyChildCardPrizes($game, $game, $carry, $wins);
 
-                return $carry;
-            }, [])
+                    return $carry;
+                }
+            , [])
         );
     }
 
