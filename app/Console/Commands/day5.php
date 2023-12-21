@@ -41,7 +41,7 @@ class day5 extends Command
             ]);
 
         $dests = collect($maps)
-            ->pipe($this->getdests(...))
+            ->pipe($this->getDests(...))
             ->pluck('location')
             ->flatten()
             ->min();
@@ -49,7 +49,7 @@ class day5 extends Command
         $this->info('Lowest dest: '. $dests);
     }
 
-    private function getdests(Collection $maps): Collection
+    private function getDests(Collection $maps): Collection
     {
         $seeds = array_fill_keys($maps['seeds-start'], []);
 
